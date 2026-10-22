@@ -2,13 +2,20 @@
 
 
 class Bille: #déplace la bille et retourne false si elle tombe
-    def __init__(self, canvas):
+    def __init__(self, canvas, vitesse):
         self.canvas = canvas
         self.rayon = 8
+        self.vitesse = vitesse
         self.graph = canvas.create_oval(0, 0, 2*self.rayon, 2*self.rayon, fill ="deepskyblue")
 
         self.reinitialiser()
 
+
+    def deplacer(self):
+            self.x += self.dx
+            self.y += self.dy
+            self.dessiner()
+    
     def deplacer(self, plateforme):
 
         self.canvas.deplacement(self.graph, self.dx, self.dy)

@@ -1,0 +1,41 @@
+
+
+
+class Pile:
+
+    #principe du LIFO : on empile et on dépile toujours par le sommet 
+    #On va utiliser le LIFO pour retirer les vies de l'utilisateur
+    #La dernière vie empilée est la première perdue
+    
+    def __init__(self):
+        self._sommet = None
+        self.taille = 0
+
+    def empiler(self, valeur):
+        noeud = Noeud(valeur)
+        noeud.suivant = self._sommet
+        self._sommet = noeud
+        self.taille += 1
+
+    def depiler(self):
+        if self._sommet is None:
+            return None
+        valeur = self._sommet.valeur
+        self._sommet = self._sommet.suivant
+        self.taille -= 1
+        return valeur
+
+    def sommet(self):
+        return None if self._sommet is None else self._sommet.valeur
+
+    def est_vide(self):
+        return self._sommet is None
+
+    def __len__(self):
+        return self.taille
+
+    def __iter__(self):  # du sommet vers le fond
+        courant = self._sommet
+        while courant is not None:
+            yield courant.valeur
+            courant = courant.suivant
