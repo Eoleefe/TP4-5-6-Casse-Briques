@@ -1,58 +1,53 @@
-"""Function file TP4
+"""Fichier classe Jeu
 Casse brique
-Author: William GIRARDET
+Author: William GIRARDET , Gaspard Naessens
 Date: October 8-22th 2026
 ToDo: 
-    Stocker les vies sous forme de pile
+    Stocker les vies sous forme de pile XXX
     Stocker les niveaux sous forme de file
-    Matrice de briques correspondant à chaque niveau 
-        0 --> espace vide
-        1 --> brique classique 
-        2 et + --> brique renforcée
+    Matrice de briques correspondant à chaque niveau XXX
+        0 --> espace vide XXX
+        1 --> brique classique XXX
+        2 et + --> brique renforcée 
         -1 --> pouvoir 
         -2 --> brique spéciale (effet)
 
-    Menu : ouvrir une nouvelle fenêtre 
+    Menu : ouvrir une nouvelle fenêtre XXX
     - Resume
     - Restart current level / game
     - Level select
     - Quit
-
-    Revoir le déplacement 
-
-    "Each frame" :
-    - check bar displacement 
-    - check ball position 
-
-    Create multiple zones in playing field:
-    - bar / dead zone (could be separate or not)
-    - empty zone (middle space where nothing happens)
-    - game zone (main outline of where the bricks are, actually the brick matrix)
     
     Effects ideas :
     - slowing the platform down for x seconds
     - "speedball" or "fireball", speed the ball up until next rebound
+
+    Global optimizations :
+    - do not redo something multiple time (initialization + init function = not optimal)
 """
 
-
-import random   
+import numpy as np
 import tkinter as tk
 import FichierFonctions as FF
+
+from ClassMenu import Menu
+from ClassRaquette import Raquette
+from ClassBalle import Balle
+from ClassBrique import Brique
 
 
 # Dimensions de la fenêtre de jeu
 LARGEUR = 720
 HAUTEUR = 480
-COULEURS = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#3498db", "#9b59b6"]
-Effect2Color = FF.Color2Dico(COULEURS)
 
-# {1: '#e74c3c', 2: '#e67e22', 3: '#f1c40f',
-#  4: '#2ecc71', 5: '#3498db', 6: '#9b59b6'}
-
-
+# -3: Effet à faire
+# -2: Effet à faire
+# -1: Effet à faire
+#  1: Brique neutre
+#  2: Brique x2 (double durabilité)
+#  3: Brique x3 (ou xN, N > 3, brique à N durabilité)
 
 # Vitesse du jeu / FPS
-
 Delai = 16 # 16ms ~ 60 FPS
 
 class Jeu(tk.Tk):
@@ -65,24 +60,54 @@ class Jeu(tk.Tk):
                                 bg="black", highlightthickness=0)
         self.GameWindow.pack()
 
-        self.raquette = Raquette(self.GameWindow)
-        self.balle = Balle(self.GameWindow)
+        self.raquette = Raquette(self.GameWindow,LARGEUR,HAUTEUR)
+        self.balle = Balle(self.GameWindow,LARGEUR,HAUTEUR)
         self.menu = Menu(self.GameWindow)
+        self.ListeBriques = [] 
 
         self.score = 0
-        self.jeu_en_cours = True
+        self.vies = "\u2665 \u2665 \u2665"
+        self.jeu_en_cours = False
+        self.fin_partie = False
+        self.difficulty = 1
+        self.message("Espace pour démarrer\nEchappe pour mettre en pause")
         self.texte_score = self.GameWindow.create_text(10, 10, anchor="nw", fill="white",
                                                    font=("Arial", 14), text="Score : 0")
+        self.texte_vies = self.GameWindow.create_text(LARGEUR -10, 10, anchor="ne",
+                                                        fill="white",font=("Arial", 14),
+                                                        text=f"Vies : {self.vies}")
+        self.texte_Niveaux = self.GameWindow.create_text(LARGEUR / 2, 10, anchor="n",
+                                                        fill="white",font=("Arial", 14),
+                                                        text=f"Niveaux {self.difficulty}")
 
         self.touches = set()
         self.bind("<KeyPress-Left>", lambda e: self._touche(e, True))
         self.bind("<KeyPress-Right>", lambda e: self._touche(e, True))
         self.bind("<KeyRelease-Left>", lambda e: self._touche(e, False))
         self.bind("<KeyRelease-Right>", lambda e: self._touche(e, False))
-        self.bind("<space>", lambda e: self.rejouer())
-        self.bind("<Escape>", lambda e: self.open_menu())
- 
+        self.bind("<r>", lambda e: self.rejouer())
+        self.bind("<space>", lambda e: self.START())
+        self.bind("<Escape>", lambda e: self.pause())
+        self.bind("<k>", lambda e: self.niveau_suivant()) # For devs only
+
+        self.Niveaux=self.File2Niveau()
+        self.Aire2Jeu(self.Niveau0())
+
+        self.CreateMenu()
         self.boucle()
+
+    def START(self):
+        if self.jeu_en_cours == False and self.fin_partie == False:
+            self.effacer_message()
+            self.jeu_en_cours = True
+
+    def message(self, texte):
+        self.effacer_message()
+        self.GameWindow.create_text(LARGEUR / 2, HAUTEUR / 1.9, fill="white", tag="msg",
+                                font=("Arial", 18, "bold"), text=texte, justify="center")
+
+    def effacer_message(self):
+        self.GameWindow.delete("msg")
 
     def _touche(self, event, pressed):
         if pressed:
@@ -96,149 +121,226 @@ class Jeu(tk.Tk):
         droite = "Right" in self.touches
         self.raquette.direction = (1 if droite else 0) - (1 if gauche else 0)
 
-
+    def Degats(self):
+        vies = self.vies.split(" ")
+        vies.pop() # on enlève l'élément du dessus
+        ViesAJour = vies[0] # puis on reconstruit la pile par le bas
+        vies.pop(0)
+        for Coeur in vies:
+            ViesAJour += " " + Coeur
+        self.vies = ViesAJour
+  
     def boucle(self):
         if self.jeu_en_cours:
+            dscore = 0
             self.raquette.deplacer()
             vivant, rebond = self.balle.deplacer(self.raquette)
-            if rebond:
-                self.score += 1
+
+            if rebond :
+                dscore += 1
                 self.balle.dy = max(-8, self.balle.dy * 1.05) # Accélération à chaque rebond jusqu'à deux fois la vitesse initiale
-                self.GameWindow.itemconfig(self.texte_score, text=f"Score : {self.score}")
+
 
             if not vivant :
-                self.fin_de_partie()
+                self.jeu_en_cours = False
+                if len(self.vies) > 1:
+                    self.go_again()
+                else:
+                    self.vies = ""
+                    self.fin_de_partie()
+
+            Collision = None
+            # deviens la brique touchée lors d'une collision
+
+            for brique in self.ListeBriques:
+                if brique != 0 and self.balle.rebond_brique(brique):
+                    Collision=brique
+                    break   # collision détectée donc pas besoin de vérifier les autres briques 
+                            # (on évite aussi le risque de supprimer plusieurs briques à la fois)
+
+            if Collision is not None:
+                dscore += 10
+                self.ListeBriques[Collision.indice()]=0
+                Collision.detruire()
+                if self.CheckList():
+                    self.niveau_suivant()
+
+            
+            if dscore != 0:
+                self.score += dscore
+                self.GameWindow.itemconfig(self.texte_score, text=f"Score : {self.score}")
 
         self.after(Delai, self.boucle)
 
-    def fin_de_partie(self):
+    def niveau_suivant(self):
+        if len(self.Niveaux) >= 1:
+            self.difficulty += 1
+            self.Niveaux.pop(0)
+        else:
+            self.Victoire()
+        self.refresh_balle()
+
+        self.message("Espace pour jouer")
+        self.vies = "\u2665 \u2665 \u2665"
+        self.ResetlistBriques()
+        self.Aire2Jeu(self.Niveaux[0])
+
+    def Victoire(self):
+        self.fin_partie = True
         self.jeu_en_cours = False
+        self.message(f"Victoire !\nScore final : {self.score}\nAppuier sur R pour rejouer")
 
+    def CheckList(self):
+        for i in self.ListeBriques:
+            if i != 0:
+                return False
+        return True
+                
+    def fin_de_partie(self):
+        self.fin_partie = True
+        self.jeu_en_cours = False
+        self.message("Perdu !\nAppuier sur R pour rejouer")
+
+    def debut_de_jeu(self):
+        if self.fin_partie == True:
+            self.fin_partie = False
+            self.refresh_balle()
+            
+            self.score = 0
+            self.vies = "\u2665 \u2665 \u2665"
+            self.difficulty = 0
+            self.ResetlistBriques()
+            self.Niveaux=self.File2Niveau()
+            self.Aire2Jeu(self.Niveaux[0])
+            self.message("Espace pour démarrer\nEchappe pour mettre en pause")
+
+    def refresh_balle(self):
+        self.jeu_en_cours = False
+        self.balle.reset()
+        self.raquette.reset()
+        self.GameWindow.itemconfig(self.texte_score, text=f"Score : {self.score}")
+        self.GameWindow.itemconfig(self.texte_vies, text=f"Vies : {self.vies}")
+        self.GameWindow.itemconfig(self.texte_Niveaux, text=f"Niveau : {self.difficulty}")
+
+    def FullReset(self):
+        self.fin_partie = True
+        self.debut_de_jeu()
+        
     def rejouer(self):
-        self.score = 0
-        self.balle.reinitialiser()
-        self.en_cours = True
+        if self.fin_partie == True:
+            self.debut_de_jeu()
 
-    def open_menu(self):
-        self.pause()
-        self.menu.menuFrame()
-    
+    def go_again(self):
+            self.refresh_balle()
+            self.effacer_message()
+            self.Degats()
+            self.message("Espace pour démarrer")
+
     def pause(self):
         if self.jeu_en_cours:
+            self.message("Pause")
             self.jeu_en_cours = False
         else:
-            self.jeu_en_cours = True
+            self.effacer_message()
+            if not self.fin_partie:
+                self.jeu_en_cours = True
 
-    def menu_exit(self):
-        self.menu.is_open = False
-        self.pause()
+    def CreateMenu(self):
+        self.menubar = tk.Menu(self.GameWindow)
 
-    
+        OptionMenu = tk.Menu(self.menubar, tearoff=0)
+        OptionMenu.add_command(label="Pause/Reprendre", command=self.pause)
+        OptionMenu.add_command(label="Rejouer", command=self.FullReset)
+        OptionMenu.add_separator()
+        OptionMenu.add_command(label="Quitter", command=self.destroy)
+        self.menubar.add_cascade(label="Manu le menu", menu=OptionMenu)
 
-
-
-class Menu:
-    def __init__(self,canvas):
-        self.GameWindow = canvas
-        self.is_open = False
-        self.MenuWindow = tk.Frame(self.GameWindow,relief='flat')
-
-    def menuFrame(self):
-        if not self.is_open:
-
-            self.is_open = True
-            self.MenuWindow.pack()
-            tk.Label(self.MenuWindow,text="RDV dentiste samedi a 15h").pack(padx=10,pady=10)
-            tk.Button(self.MenuWindow,text="Effacer",fg='navy',command=self.MenuWindow.destroy).pack(padx=10,pady=10)
-
+        InfoMenu = tk.Menu(self.menubar, tearoff=0)
+        InfoMenu.add_command(label="Liste, Pile, File", command=self.menu.InfoListe)
+        # InfoMenu.add_command(label="", command=None)
+        self.menubar.add_cascade(label="Info", menu=InfoMenu)
         
+        self.config(menu=self.menubar)
 
-class Raquette:
-    def __init__(self, canvas):
-        self.canvas = canvas
-        self.largeur = 140
-        self.hauteur = 16
-        self.x = (LARGEUR - self.largeur) / 2
-        self.y = HAUTEUR - self.hauteur - 10
-        self.vitesse = 10
-        self.direction = 0 # -1 gauche, 0 immobile, +1 droite
-        self.rect = canvas.create_rectangle(self.x, self.y, self.x + self.largeur, self.y + self.hauteur, fill="white")
+    def Niveau0(self):
+        Niveau = np.zeros((5,3))
+        Niveau[1][1] = 1
+        Niveau[3][1] = 1
+        return Niveau
 
-    def deplacer(self):
-        if self.direction == -1: # Gauche
-            if self.x > 0:
-                self.x -= self.vitesse
-                if self.x < 0: # cas limite pour ne pas sortir de la fenêtre
-                    self.x = 0
-        elif self.direction == 1: # Droite
-            if self.x + self.largeur < LARGEUR:
-                self.x += self.vitesse
-                if self.x + self.largeur > LARGEUR: # cas limite pour ne pas sortir de la fenêtre
-                    self.x = LARGEUR - self.largeur
-        # Mise à jour de la position du rectangle dans le caneva
-        self.canvas.coords(self.rect, self.x, self.y, self.x + self.largeur, self.y + self.hauteur)
+    def Niveau1(self):
+        Niveau = np.ones((9,5))
+        return Niveau
 
+    def Niveau2(self):
+        size = (9,5)
+        Niveau = np.ones(size)
+        k = 0
+        for i in range(size[0]):
+            for j in range(size[1]):
+                if k % 2 == 0:
+                    Niveau[i][j] = 2
+                else:
+                    Niveau[i][j] = 0
+                k += 1
+        return Niveau
 
-class Brique:
-    def __init__(self, x, y, largeur, hauteur, effet, canvas):
-        self.x, self.y = x ,y
-        self.l, self.h = largeur, hauteur
-        self.effet = effet
-        self.canvas = canvas
+    def Niveau3(self):
+            size = (9,5)
+            Niveau = np.ones(size)
+            k = 0
+            for i in range(size[0]):
+                for j in range(size[1]):
+                    if k % 2 == 0:
+                        Niveau[i][j] = 3
+                    else:
+                        Niveau[i][j] = 1
+                    k += 1
+            return Niveau
 
-        self.id = canvas.create_rectangle(x, y, x + largeur, y + hauteur,fill = Effect2Color[self.effet])
-        self.is_destroyed = False
+    def Niveau4(self):
+            size = (9,6)
+            Niveau = np.ones(size)
+            for i in range(size[0]):
+                for j in range(size[1]):
+                    n = j - 3
+                    if n < 0 :
+                        Niveau[i][j] = n
+                    else:
+                        Niveau[i][j] = n + 1
 
-    def destroy(self):
-        self.is_destroyed = True
+            return Niveau
 
-    def is_destroyed(self):
-        return self.is_destroyed
+    def File2Niveau(self):
+        File=[]
+        File.append(self.Niveau0())  # XXX test dev
+        File.append(self.Niveau1())
+        File.append(self.Niveau2())
+        File.append(self.Niveau3())
+        File.append(self.Niveau4())
+        return File
 
-class Balle:
-    def __init__(self,canvas):
-        self.canevas = canvas
-        self.r = 8    # rayon de la balle
-        self.id = self.canevas.create_oval(-self.r, -self.r, self.r, self.r, fill = 'white')
-
-        self.reset()
-
-    def reset(self):
-        x = LARGEUR / 2
-        y = HAUTEUR / 2
-        self.canevas.coords(self.id, x - self.r, y - self.r, x + self.r, y + self.r)
-        # on utilise la méthode de déplacement dx,dy 
-        # avec la fonction "canvas.move(id, dx, dy)" afin de faciliter les calculs
-        self.dx = random.choice([-4,4]) # Sens de départ aléatoire gauche/droite
-        self.dy = -4
-
-    def deplacer(self,raquette): # -> (vivant,rebond), deux booléens
-        self.canevas.move(self.id, self.dx, self.dy)
-        x1, y1, x2, y2 = self.canevas.coords(self.id) # Coordonnées de la balle
-
-        # Gestion des rebonds sur les murs
-
-        if x1 <= 0: # rebond gauche
-            self.dx = abs(self.dx) # la balle repart à droite (=> dx > 0)
-        elif x2 >= LARGEUR: # rebond droit
-            self.dx = -abs(self.dx) # la balle repart à gauche (=> dx < 0)
-        if y1 <= 0: # rebond haut
-            self.dy = abs(self.dy) # la balle repart en bas (=> dy > 0)
-
-        # rebond sur la raquette
-        px1, py1, px2, py2 = raquette.canvas.coords(raquette.rect)
-        if self.dy > 0 and x2 >= px1 and x1 <= px2 and y2 >= py1 and y1 <= py2:
-            self.dy = -abs(self.dy) # rebond bas
-            centre_balle = (x1 + x2) / 2
-            centre_raquette = (px1 + px2) / 2
-            position = (centre_balle - centre_raquette) / (px2 - px1) # postion de la balle relativement à la raquette, -1 -> tout à gauche, 0 -> au milieu, +1 -> tout à droite
-            self.dx = position * 6.7 # nombre choisi arbitrairement et correspond à la vitesse du rebond
-            return True,True
-
-        # Balle perdue
-        if y2 >= HAUTEUR:
-            return False,False
-        return True,False
-
+    def ResetlistBriques(self):
+        for brique in self.ListeBriques:
+            if brique != 0 :
+                brique.detruire()
+        self.ListeBriques = []
+        
+    def Aire2Jeu(self,Niveau):
+        """
+        
+        """
+        Nx, Ny = np.size(Niveau, 0), np.size(Niveau, 1)
+        k = 0
+        for i in range(Nx):
+            for j in range(Ny):
+                effet = Niveau[i][j]
+                if effet != 0 and effet >= -3:
+                    x , y = 20 + (LARGEUR - 40) / Nx * i , 40 + j * 24
+                    l , h = (LARGEUR - 40) / Nx - 4, 20
+                    # On laisse 4 pixels entre chaque briques pour aérer l'aire de jeu
+                    
+                    self.ListeBriques.append(Brique(x,y,l,h,effet,self.GameWindow,k))
+                    k += 1
 
 Jeu().mainloop()
