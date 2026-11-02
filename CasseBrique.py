@@ -2,12 +2,12 @@
 Casse brique
 Author: William GIRARDET , Gaspard Naessens
 Date: October 8-22th 2026
-ToDo: 
+ToDo: See ClassJeu.py
 """
 
 from ClassJeu import Jeu
 import tkinter as tk
-# Dimensions de la fenêtre de jeu
+# Dimensions de la fenêtre de jeu (SD window for most compatibility)
 LARGEUR = 720
 HAUTEUR = 480
 

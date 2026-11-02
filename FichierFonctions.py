@@ -1,3 +1,10 @@
+"""Fichier de fonctions
+Casse brique
+Author: William GIRARDET , Gaspard Naessens
+Date: October 8-22th 2026
+ToDo: Nothing !
+"""
+
 def Color2Dico(ListColor):
     D={}
     for i in range(-3,0):
