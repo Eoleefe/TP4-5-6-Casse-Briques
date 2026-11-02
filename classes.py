@@ -20,6 +20,9 @@ ToDo:
 
     Global optimizations :
     - do not redo something multiple time (initialization + init function = not optimal)
+    - inclure la difficulté dans le niveau, ie: niveau -> (int,table)
+      on évite ainsi la variable "difficulty"
+    - 
 """
 
 import numpy as np
@@ -52,14 +55,17 @@ class Jeu(tk.Tk):
         self.raquette = Raquette(self.GameWindow,LARGEUR,HAUTEUR)
         self.balle = Balle(self.GameWindow,LARGEUR,HAUTEUR)
         self.menu = Menu(self.GameWindow)
-        self.ListeBriques = [] 
+        self.ListeBriques = []  # Les briques de l'aire de jeu sont stockées 
+                                # dans une liste
 
         self.score = 0
-        self.vies = "\u2665 \u2665 \u2665"
+        self.vies = "\u2665 \u2665 \u2665" # \u2665 est un coeur (code unicode)
         self.jeu_en_cours = False
         self.fin_partie = False
-        self.difficulty = 1
+        self.difficulty = 1 # Niveau actuel
         self.message("Espace pour démarrer\nEchappe pour mettre en pause")
+
+        # Initialisation des variables visibles par le joueur
         self.texte_score = self.GameWindow.create_text(10, 10, anchor="nw", fill="white",
                                                    font=("Arial", 14), text="Score : 0")
         self.texte_vies = self.GameWindow.create_text(LARGEUR -10, 10, anchor="ne",
@@ -69,6 +75,7 @@ class Jeu(tk.Tk):
                                                         fill="white",font=("Arial", 14),
                                                         text=f"Niveaux {self.difficulty}")
 
+        #Initialisation des touches utiles pour le jeu
         self.touches = set()
         self.bind("<KeyPress-Left>", lambda e: self._touche(e, True))
         self.bind("<KeyPress-Right>", lambda e: self._touche(e, True))
@@ -79,6 +86,7 @@ class Jeu(tk.Tk):
         self.bind("<Escape>", lambda e: self.pause())
         self.bind("<k>", lambda e: self.niveau_suivant()) # For devs only
 
+        # Init de la file de niveaux
         self.DevLevels=self.File2Niveau()
         self.Niveaux=[self.DevLevels[k] for k in range(1,len(self.DevLevels))]
         

@@ -2,7 +2,7 @@
 Casse brique
 Author: William GIRARDET , Gaspard Naessens
 Date: October 8-22th 2026
-ToDo: Add effects
+ToDo: Implement effects
     Effects ideas :
     - slowing the platform down for x seconds
     - "speedball" or "fireball", speed the ball up until next rebound
