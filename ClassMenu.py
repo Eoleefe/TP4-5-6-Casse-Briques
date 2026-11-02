@@ -2,7 +2,12 @@
 Casse brique
 Author: William GIRARDET
 Date: October 8-22th 2026
-ToDo: nothing !
+ToDo:
+    Menu : ouvrir une nouvelle fenêtre (Not working so folding menu instead) XXX
+    - Resume
+    - Restart current level / game
+    - Level select
+    - Quit
 """
 import tkinter as tk
 from tkinter import messagebox

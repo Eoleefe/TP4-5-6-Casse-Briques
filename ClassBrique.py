@@ -2,12 +2,23 @@
 Casse brique
 Author: William GIRARDET , Gaspard Naessens
 Date: October 8-22th 2026
-ToDo: nothing !
+ToDo: Add effects
+    Effects ideas :
+    - slowing the platform down for x seconds
+    - "speedball" or "fireball", speed the ball up until next rebound
 """
 
 import FichierFonctions as FF
 COULEURS = ["#9b59b6", "#3498db", "#2ecc71", "#f1c40f", "#e67e22", "#e74c3c"]
 Effect2Color = FF.Color2Dico(COULEURS)
+
+# Effets :
+# -3: Effet à faire
+# -2: Effet à faire
+# -1: Effet à faire
+#  1: Brique neutre
+#  2: Brique x2 (double durabilité)
+#  3: Brique x3 (ou xN, N > 3, brique à N durabilité)
 
 class Brique:
     def __init__(self, x, y, largeur, hauteur, effet, canvas,k):

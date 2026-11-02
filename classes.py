@@ -12,15 +12,11 @@ ToDo:
         -1 --> pouvoir 
         -2 --> brique spéciale (effet)
 
-    Menu : ouvrir une nouvelle fenêtre XXX
+    Menu : ouvrir une nouvelle fenêtre (Not working so folding menu instead) XXX
     - Resume
     - Restart current level / game
     - Level select
     - Quit
-    
-    Effects ideas :
-    - slowing the platform down for x seconds
-    - "speedball" or "fireball", speed the ball up until next rebound
 
     Global optimizations :
     - do not redo something multiple time (initialization + init function = not optimal)
@@ -39,13 +35,6 @@ from ClassBrique import Brique
 # Dimensions de la fenêtre de jeu
 LARGEUR = 720
 HAUTEUR = 480
-
-# -3: Effet à faire
-# -2: Effet à faire
-# -1: Effet à faire
-#  1: Brique neutre
-#  2: Brique x2 (double durabilité)
-#  3: Brique x3 (ou xN, N > 3, brique à N durabilité)
 
 # Vitesse du jeu / FPS
 Delai = 16 # 16ms ~ 60 FPS
@@ -90,10 +79,13 @@ class Jeu(tk.Tk):
         self.bind("<Escape>", lambda e: self.pause())
         self.bind("<k>", lambda e: self.niveau_suivant()) # For devs only
 
-        self.Niveaux=self.File2Niveau()
-        self.Aire2Jeu(self.Niveau0())
+        self.DevLevels=self.File2Niveau()
+        self.Niveaux=[self.DevLevels[k] for k in range(1,len(self.DevLevels))]
+        
+        self.Aire2Jeu(self.Niveaux[0])
 
         self.CreateMenu()
+        self.FullReset()
         self.boucle()
 
     def START(self):
@@ -204,13 +196,14 @@ class Jeu(tk.Tk):
     def debut_de_jeu(self):
         if self.fin_partie == True:
             self.fin_partie = False
-            self.refresh_balle()
+
             
             self.score = 0
             self.vies = "\u2665 \u2665 \u2665"
-            self.difficulty = 0
+            self.difficulty = 1
+            self.refresh_balle()
             self.ResetlistBriques()
-            self.Niveaux=self.File2Niveau()
+            self.Niveaux = [self.DevLevels[k] for k in range(1,len(self.DevLevels))]
             self.Aire2Jeu(self.Niveaux[0])
             self.message("Espace pour démarrer\nEchappe pour mettre en pause")
 
@@ -231,9 +224,9 @@ class Jeu(tk.Tk):
             self.debut_de_jeu()
 
     def go_again(self):
-            self.refresh_balle()
             self.effacer_message()
             self.Degats()
+            self.refresh_balle()
             self.message("Espace pour démarrer")
 
     def pause(self):
@@ -255,12 +248,46 @@ class Jeu(tk.Tk):
         OptionMenu.add_command(label="Quitter", command=self.destroy)
         self.menubar.add_cascade(label="Manu le menu", menu=OptionMenu)
 
+        LevelMenu = tk.Menu(self.menubar, tearoff=0)
+        LevelMenu.add_command(label="Niveau 0", command=self.level0)
+        LevelMenu.add_command(label="Niveau 1", command=self.level1)
+        LevelMenu.add_command(label="Niveau 2", command=self.level2)
+        LevelMenu.add_command(label="Niveau 3", command=self.level3)
+        LevelMenu.add_command(label="Niveau 4", command=self.level4)
+        # LevelMenu.add_command(label="Niveau 5", command=self.level_select(5))
+        self.menubar.add_cascade(label="Selection de niveau", menu=LevelMenu)
+
         InfoMenu = tk.Menu(self.menubar, tearoff=0)
         InfoMenu.add_command(label="Liste, Pile, File", command=self.menu.InfoListe)
         # InfoMenu.add_command(label="", command=None)
         self.menubar.add_cascade(label="Info", menu=InfoMenu)
         
         self.config(menu=self.menubar)
+
+    def level0(self):
+        self.level_select(0)
+    def level1(self):
+        self.level_select(1)
+    def level2(self):
+        self.level_select(2)
+    def level3(self):
+        self.level_select(3)
+    def level4(self):
+        self.level_select(4)
+
+    def level_select(self,diff):
+            self.fin_partie = False
+            
+            self.score = 0
+            self.vies = "\u2665 \u2665 \u2665"
+            self.difficulty = diff
+            self.refresh_balle()
+            self.ResetlistBriques()
+            self.Niveaux = []
+            for k in range(diff,len(self.DevLevels)):
+                self.Niveaux.append(self.DevLevels[k])
+            self.Aire2Jeu(self.Niveaux[0])
+            self.message("Espace pour démarrer\nEchappe pour mettre en pause")
 
     def Niveau0(self):
         Niveau = np.zeros((5,3))
