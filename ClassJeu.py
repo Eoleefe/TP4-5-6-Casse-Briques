@@ -27,7 +27,6 @@ ToDo:
 
 import numpy as np
 import tkinter as tk
-import FichierFonctions as FF
 
 from ClassMenu import Menu
 from ClassRaquette import Raquette
@@ -35,18 +34,15 @@ from ClassBalle import Balle
 from ClassBrique import Brique
 
 
-# Dimensions de la fenêtre de jeu
-LARGEUR = 720
-HAUTEUR = 480
-
-# Vitesse du jeu / FPS
-Delai = 16 # 16ms ~ 60 FPS
 
 class Jeu(tk.Tk):
-    def __init__(self):
+    def __init__(self,LARGEUR,HAUTEUR,Delai):
         super().__init__()
         self.title("Casse brique")
         self.resizable(False, False)
+        self.delai = Delai
+        self.LARGEUR = LARGEUR
+        self.HAUTEUR = HAUTEUR
 
         self.GameWindow = tk.Canvas(self, width=LARGEUR, height=HAUTEUR,
                                 bg="black", highlightthickness=0)
@@ -103,7 +99,7 @@ class Jeu(tk.Tk):
 
     def message(self, texte):
         self.effacer_message()
-        self.GameWindow.create_text(LARGEUR / 2, HAUTEUR / 1.9, fill="white", tag="msg",
+        self.GameWindow.create_text(self.LARGEUR / 2, self.HAUTEUR / 1.9, fill="white", tag="msg",
                                 font=("Arial", 18, "bold"), text=texte, justify="center")
 
     def effacer_message(self):
@@ -170,7 +166,7 @@ class Jeu(tk.Tk):
                 self.score += dscore
                 self.GameWindow.itemconfig(self.texte_score, text=f"Score : {self.score}")
 
-        self.after(Delai, self.boucle)
+        self.after(self.delai, self.boucle)
 
     def niveau_suivant(self):
         if len(self.Niveaux) >= 1:
@@ -371,11 +367,11 @@ class Jeu(tk.Tk):
             for j in range(Ny):
                 effet = Niveau[i][j]
                 if effet != 0 and effet >= -3:
-                    x , y = 20 + (LARGEUR - 40) / Nx * i , 40 + j * 24
-                    l , h = (LARGEUR - 40) / Nx - 4, 20
+                    x , y = 20 + (self.LARGEUR - 40) / Nx * i , 40 + j * 24
+                    l , h = (self.LARGEUR - 40) / Nx - 4, 20
                     # On laisse 4 pixels entre chaque briques pour aérer l'aire de jeu
                     
                     self.ListeBriques.append(Brique(x,y,l,h,effet,self.GameWindow,k))
                     k += 1
 
-Jeu().mainloop()
+
